@@ -1,0 +1,8 @@
+# Virtual environment
+venv/
+# Database file
+backend/db.sqlite3
+# React
+frontend/node_modules/
+# Build artifacts
+frontend/build/
