@@ -37,7 +37,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Order App
     'orders.apps.OrdersConfig', 
+    # DRF
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -50,7 +53,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'orderTracker.urls'
+ROOT_URLCONF = 'api.urls'
 
 TEMPLATES = [
     {
@@ -67,7 +70,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'orderTracker.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
@@ -75,8 +78,12 @@ WSGI_APPLICATION = 'orderTracker.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'order_db',  # The name of your PostgreSQL database
+        'USER': 'neil',  # Your PostgreSQL username
+        'PASSWORD': 'password',  # Your PostgreSQL password
+        'HOST': 'localhost',        # The host of your database server
+        'PORT': '5432',             # The port number (default is 5432)
     }
 }
 
