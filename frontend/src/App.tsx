@@ -1,9 +1,9 @@
-import { CustomerList } from "./components/CustomerList"
+import { CustomerManager } from "./components/CustomerManager"
 
 function App() {
   return (
     <div>
-      <CustomerList />
+      <CustomerManager />
     </div>
   )
 }

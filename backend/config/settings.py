@@ -25,11 +25,11 @@ SECRET_KEY = 'django-insecure-k-$fqtt2cc6)uo4bd((hwm@_!g8j^)ec5$p5x^mo-#4_7a7e76
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-] 
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:5173',  # React frontend
+]
 
+CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins for development
 
 # Application definition
 
@@ -44,12 +44,14 @@ INSTALLED_APPS = [
     'orders.apps.OrdersConfig', 
     # DRF
     'rest_framework',
+    # CORS
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
