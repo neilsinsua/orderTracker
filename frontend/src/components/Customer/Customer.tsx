@@ -1,4 +1,4 @@
-import {deleteCustomer} from "../services/customerService";
+import {deleteCustomer} from "../../services/customerService.tsx";
 import {useState} from "react";
 import {CustomerEditForm} from "./CustomerEditForm.tsx";
 
@@ -22,7 +22,7 @@ interface ExistingCustomerProps {
 
 export const Customer = ({ customer, onDeleteCustomer, onPutCustomer }: ExistingCustomerProps) => {
 
-    const [showForm, setShowForm] = useState<boolean>(false)
+    const [showEditForm, setShowEditForm] = useState<boolean>(false)
     const handleDelete = async () => {
         try {
             await deleteCustomer(customer.id!);
@@ -34,23 +34,23 @@ export const Customer = ({ customer, onDeleteCustomer, onPutCustomer }: Existing
 
     return (
         <div>
-            {!showForm ? (
+            {!showEditForm ? (
                 <div className={"flex items-center w-full mb-4 space-x-4"}>
                     <div className="flex-1 max-w-md p-4 bg-white shadow rounded-lg">
                     <p>{customer.name}</p>
                     <p>{customer.email}</p>
                 </div>
-                <button type="button" onClick={handleDelete} className={"mr-1"}>delete</button>
-                <button onClick={() => setShowForm(true)}>edit</button>
+                <button type="button" onClick={handleDelete} className={"mr-1 px-2 bg-red-300 rounded"}>delete</button>
+                <button onClick={() => setShowEditForm(true)} className={"px-2 bg-orange-300 rounded"}>edit</button>
                 </div>
             ) : (
                 <CustomerEditForm
                     customerId={customer.id}
                     customerEmail={customer.email}
                     customerName={customer.name}
-                    onCancel={() => setShowForm(false)}
+                    onCancel={() => setShowEditForm(false)}
                     onSuccess={() => {
-                        setShowForm(false);
+                        setShowEditForm(false);
                         onPutCustomer();
                     }}
                 />

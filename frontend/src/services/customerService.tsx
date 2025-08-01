@@ -1,5 +1,5 @@
 import axios from "axios";
-import type {ExistingCustomerType, NewCustomerType} from "../components/Customer";
+import type {ExistingCustomerType, NewCustomerType} from "../components/Customer/Customer.tsx";
 import { apiurl } from "./apiconfig";
 
 const api = axios.create({

@@ -1,9 +1,9 @@
-import { CustomerManager } from "./components/CustomerManager"
+import {AppController} from "./components/AppController.tsx";
 
 function App() {
   return (
     <div>
-      <CustomerManager />
+        <AppController/>
     </div>
   )
 }

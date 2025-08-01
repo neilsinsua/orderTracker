@@ -1,5 +1,5 @@
 import type {ExistingCustomerType} from "./Customer.tsx";
-import { Customer } from "./Customer";
+import { Customer } from "./Customer.tsx";
 
 interface CustomerListProps {
     existingCustomers: ExistingCustomerType[];
