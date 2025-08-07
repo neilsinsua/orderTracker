@@ -18,6 +18,10 @@ export const ProductManager = () => {
             console.log(error);
         }
     }
+    const handleSuccess = () => {
+        setShowForm(false);
+        loadProducts();
+    }
 
     useEffect(() => {
         loadProducts();
@@ -25,11 +29,12 @@ export const ProductManager = () => {
 
     return(
         <div>
-            <ProductList existingProducts={products} onAddProduct={() => setShowForm(true)} onDeleteProduct={() => loadProducts()} onCancel={() => setShowForm(false)}/>
-            {showForm && <ProductForm onSuccess={() => {
-                setShowForm(false);
-                loadProducts();
-            }}/>}
+            <ProductList existingProducts={products}
+                         onAddProduct={() => setShowForm(true)}
+                         onDeleteProduct={() => loadProducts()}
+                         onCancel={() => setShowForm(false)}
+                         onPutProduct={() => loadProducts()}/>
+            {showForm && <ProductForm onSuccess={handleSuccess} onCancel={() => setShowForm(false)}/>}
         </div>
     )
 }

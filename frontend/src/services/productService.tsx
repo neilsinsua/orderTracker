@@ -34,3 +34,11 @@ export async function deleteProduct(id: number): Promise<void> {
         console.log(error);
     }
 }
+
+export async function putProduct(id: number, product: NewProductType) {
+    try {
+        await api.put(`/products/${id}/`, product);
+    } catch (error) {
+        console.log(error);
+    }
+}

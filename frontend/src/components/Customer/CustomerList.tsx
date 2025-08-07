@@ -32,7 +32,7 @@ export const CustomerList = ({
             {!showAddCustomerButton && (
                 <button
                     onClick={onAddCustomer}
-                    className="mr-2 px-4 bg-blue-100 rounded"
+                    className="mr-2 mb-4 px-4 bg-blue-100 rounded"
                 >
                     Add Customer
                 </button>

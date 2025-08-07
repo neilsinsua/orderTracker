@@ -3,7 +3,7 @@ import {ProductManager} from "./Product/ProductManager.tsx";
 import {NavBar} from "./NavBar.tsx";
 import {useState} from "react";
 
-export type Views = "products" | "customers"
+export type Views = "products" | "customers" | "orders";
 
 export const AppController = () => {
 const [view, setView] = useState<Views>("products")
@@ -17,6 +17,7 @@ const [view, setView] = useState<Views>("products")
             }}/>
             {view === 'customers' && (<CustomerManager/>)}
             {view === 'products' && (<ProductManager/>)}
+
             {/*TODO add OrderManager*/}
         </div>
     )

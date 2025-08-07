@@ -18,7 +18,7 @@ export const CustomerEditForm = ({onSuccess, onCancel, customerId, customerName,
     const handlePut = async () => {
         //validate input
         if (!name.trim() || !email.trim()) {
-            return alert("name and email required")
+            return alert("name and email required");
         }
         setIsSubmitting(true);
         try {
@@ -28,7 +28,6 @@ export const CustomerEditForm = ({onSuccess, onCancel, customerId, customerName,
             onSuccess();
         } catch (err) {
             console.log(err);
-            console.log(typeof err);
         } finally {
             setIsSubmitting(false);
         }

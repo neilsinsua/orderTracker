@@ -39,9 +39,9 @@ export const Customer = ({ customer, onDeleteCustomer, onPutCustomer }: Existing
                     <div className="flex-1 max-w-md p-4 bg-white shadow rounded-lg">
                     <p>{customer.name}</p>
                     <p>{customer.email}</p>
-                </div>
-                <button type="button" onClick={handleDelete} className={"mr-1 px-2 bg-red-300 rounded"}>delete</button>
-                <button onClick={() => setShowEditForm(true)} className={"px-2 bg-orange-300 rounded"}>edit</button>
+                    </div>
+                    <button type="button" onClick={handleDelete} className="mr-1 px-2 bg-red-300 rounded">delete</button>
+                    <button onClick={() => setShowEditForm(true)} className="px-2 bg-orange-300 rounded">edit</button>
                 </div>
             ) : (
                 <CustomerEditForm

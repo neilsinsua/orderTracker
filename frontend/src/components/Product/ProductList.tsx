@@ -6,24 +6,20 @@ interface ProductListProps {
     onAddProduct: () => void;
     onDeleteProduct: () => void;
     onCancel: () => void;
+    onPutProduct: () => void;
 }
 
-export const ProductList = ({existingProducts, onAddProduct, onCancel, onDeleteProduct}: ProductListProps) => {
+export const ProductList = ({existingProducts, onAddProduct, onCancel, onDeleteProduct, onPutProduct}: ProductListProps) => {
     return (
         <div>
             {[...existingProducts].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).map((c) => (
-                <Product key={c.id} product={c} onDelete={onDeleteProduct}/>
+                <Product key={c.id} product={c} onDelete={onDeleteProduct} onPutProduct={onPutProduct}/>
             ))}
             <button
                     onClick={onAddProduct}
-                    className="mr-2 px-4 bg-blue-100 rounded"
+                    className="mr-2 px-4 bg-blue-100 rounded mb-4"
                 >
                     Add Product
-            </button>
-            <button
-                onClick={onCancel}
-                className={"mr-2 px-4 bg-red-100 rounded"}>
-                Cancel
             </button>
         </div>
     );
