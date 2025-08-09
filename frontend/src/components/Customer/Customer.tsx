@@ -1,11 +1,11 @@
-import {deleteCustomer} from "../../services/customerService.tsx";
-import {useState} from "react";
-import {CustomerEditForm} from "./CustomerEditForm.tsx";
+
+import {CustomerForm} from "./CustomerForm.tsx";
+import {useCustomers} from "../../hooks/useCustomers.ts";
+import {useCustomerStore} from "../../stores/customerStore.ts";
 
 export interface NewCustomerType {
     name: string;
     email: string;
-
 }
 
 export interface ExistingCustomerType extends NewCustomerType {
@@ -16,44 +16,34 @@ export interface ExistingCustomerType extends NewCustomerType {
 
 interface ExistingCustomerProps {
     customer: ExistingCustomerType;
-    onDeleteCustomer: () => void;
-    onPutCustomer: () => void
 }
 
-export const Customer = ({ customer, onDeleteCustomer, onPutCustomer }: ExistingCustomerProps) => {
+export const Customer = ({ customer }: ExistingCustomerProps) => {
 
-    const [showEditForm, setShowEditForm] = useState<boolean>(false)
+    const { deleteCustomer, isDeleting } = useCustomers();
+    const { editCustomerID, setEditCustomerID } = useCustomerStore();
+    const isEditing = editCustomerID === customer.id;
+
     const handleDelete = async () => {
-        try {
-            await deleteCustomer(customer.id!);
-            onDeleteCustomer()
-        } catch (error) {
-            console.log(error);
-        }
-    }
+        await deleteCustomer(customer.id);
+    };
 
     return (
         <div>
-            {!showEditForm ? (
-                <div className={"flex items-center w-full mb-4 space-x-4"}>
+            {!isEditing ? (
+                <div className="flex items-center w-full mb-4 space-x-4">
                     <div className="flex-1 max-w-md p-4 bg-white shadow rounded-lg">
                     <p>{customer.name}</p>
                     <p>{customer.email}</p>
                     </div>
-                    <button type="button" onClick={handleDelete} className="mr-1 px-2 bg-red-300 rounded">delete</button>
-                    <button onClick={() => setShowEditForm(true)} className="px-2 bg-orange-300 rounded">edit</button>
+                    <button onClick={() => setEditCustomerID(customer.id)} className="px-2 bg-orange-300 rounded">edit</button>
+                    <button type="button" onClick={handleDelete} className="px-2 bg-red-300 rounded">delete</button>
+                    {isDeleting && "Deleting"}
                 </div>
             ) : (
-                <CustomerEditForm
-                    customerId={customer.id}
-                    customerEmail={customer.email}
-                    customerName={customer.name}
-                    onCancel={() => setShowEditForm(false)}
-                    onSuccess={() => {
-                        setShowEditForm(false);
-                        onPutCustomer();
-                    }}
-                />
+                <CustomerForm customer={customer}
+                              onCancel={() => setEditCustomerID(null)}
+                              onSuccess={() => setEditCustomerID(null)}/>
             )}
 
         </div>

@@ -1,74 +1,112 @@
-import {use, useState} from "react";
-import {createProduct} from "../../services/productService.tsx";
-import {type AxiosError, isAxiosError} from "axios";
+import type {ExistingProductType, NewProductType} from "./Product.tsx";
+import {useProducts} from "../../hooks/useProducts.ts";
+import {useProductStore} from "../../stores/productStore.ts";
+import {z} from "zod";
+import {useForm} from "react-hook-form";
+import {zodResolver} from "@hookform/resolvers/zod";
+import {useEffect} from "react";
+
+
 
 export interface ProductFormProps {
-    onSuccess: () => void;
+    product?: ExistingProductType;
     onCancel: () => void;
+    onSuccess: () => void;
 }
 
-type SkuError = {sku: string[]}
+const productSchema = z.object({
+    sku: z.string().min(1, "SKU is required"),
+    name: z.string().min(1, "Name is required"),
+    unit_price: z.string()
+                .regex(/^(0|[1-9]\d*)\.\d{2}$/, {message: "Enter a number (2 decimal places)"})
+                .refine(value => parseFloat(value) >= 0, {message: "No negative prices"}),
+    stock_level: z.string()
+                .regex(/^[0-9]+$/, {message: "Enter a whole number"})
+                .refine(value => parseFloat(value) >= 0, {message: "No negative stock"})
+})
+type ProductFormData = z.infer<typeof productSchema>;
 
-export const ProductForm = ({onSuccess, onCancel}: ProductFormProps) => {
-    const [sku, setSku] = useState<string>("")
-    const [name, setName] = useState<string>("")
-    const [unit_price, setUnit_Price] = useState<number>(0)
-    const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
-    const [skuError, setSkuError] = useState<string>("")
-    const [unitPriceError, setUnitPriceError] = useState<string>("")
-    const checkSkuError = (err: unknown): err is AxiosError<SkuError> => {
-        return isAxiosError(err);
-    }
-    const handleSkuError = (err: AxiosError<SkuError>) => {
-        const error = err.response.data.sku[0];
-        setSkuError(error);
-    }
-    const handleSubmit = async () => {
-        if( !sku.trim() || !name.trim() || unit_price == 0) {
-            return alert("sku, name, unit price required")
+export const ProductForm = ({product, onCancel, onSuccess}: ProductFormProps) => {
+    const {
+        updateProduct,
+        createProduct,
+    } = useProducts();
+    const {
+        productFormSku,
+        productFormName,
+        productFormUnit_price,
+        productFormStock_level,
+        setProductFormSku,
+        setProductFormName,
+        setProductFormUnit_price,
+        setProductFormStock_level
+    } = useProductStore();
+
+    const {
+        register,
+        handleSubmit,
+        formState: {errors, isSubmitting},
+    } = useForm<ProductFormData>({
+        resolver: zodResolver(productSchema),
+        defaultValues: product
+        ? {sku: product.sku, name: product.name, unit_price: product.unit_price.toString(), stock_level: product.stock_level.toString()}
+            : {sku: "", name: "", unit_price: "", stock_level: ""}
+    });
+
+    useEffect(() => {
+        if (product) {
+            setProductFormSku(product.sku);
+            setProductFormName(product.name);
+            setProductFormUnit_price(product.unit_price);
+            setProductFormStock_level(product.stock_level);
         }
-        setIsSubmitting(true)
+    }, [product, setProductFormSku, setProductFormName, setProductFormUnit_price, setProductFormStock_level]);
+
+    const onSubmit = handleSubmit(async (data: ProductFormData) => {
         try {
-            await createProduct({sku, name, unit_price});
-            onSuccess()
-        } catch (err) {
-            if(checkSkuError(err)) {
-                handleSkuError(err);
+            const formattedData: NewProductType = {
+                sku: data.sku,
+                name: data.name,
+                unit_price: parseFloat(data.unit_price),
+                stock_level: parseInt(data.stock_level)
+            };
+            if(product) {
+                await updateProduct({id: product.id, product: formattedData});
+            } else {
+                await createProduct(formattedData);
             }
-            console.log(err)
-        } finally {
-            setIsSubmitting(false)
+            setProductFormSku("");
+            setProductFormName("");
+            setProductFormUnit_price(0);
+            setProductFormStock_level(0);
+            onSuccess();
+        } catch (error) {
+            console.error("Error submitting form:", error);
         }
-    }
+    })
 
     return (
         <div className="flex items-center w-full mb-4 space-x-4">
             <div className="flex-1 max-w-md p-4 bg-white shadow rounded-lg">
-                <form className={"flex flex-col"}>
-            <input type="text" className="mb-2" placeholder="sku" onChange={ e => setSku(e.target.value)} required/>
-                <p className="text-red-500">{skuError}</p>
-            <input type="text" className="mb-2" placeholder="name" onChange={ e => setName(e.target.value)} required/>
-            <input type="number" className="mb-2" value={unit_price} onChange={ e => {
-                const num = e.target.valueAsNumber
-                if(Number.isNaN(num)) {
-                    setUnit_Price(0);
-                }
-                const decimal = num.toString().split('.')[1];
-                if(decimal && decimal.length > 2) {
-                    setUnit_Price(Math.floor(num * 100) / 100);
-                    setUnitPriceError("Max 2 decimal places");
-                    return;
-                }
-                setUnit_Price(num);
-                setUnitPriceError("");
-            }} required/>
-                    <p className="text-red-500">{unitPriceError}</p>
-            </form>
-            <div className="flex justify-start">
-                <button type="button" className="mr-2 px-4 bg-blue-100 rounded" onClick={handleSubmit}>Add</button>
-                {isSubmitting && "Adding"}
-                <button type="button" className="mr-2 px-4 bg-red-100 rounded" onClick={onCancel}>Cancel</button>
-            </div>
+                <input {...register("sku")} type="text" value={productFormSku} onChange={(e) => setProductFormSku(e.target.value)} required/>
+                {errors.sku && (<p className="text-red-500">{errors.sku.message}</p>)}
+                <input {...register("name")} type="text" value={productFormName} onChange={(e) => setProductFormName(e.target.value)} required/>
+                {errors.name && (<p className="text-red-500">{errors.name.message}</p>)}
+                <input {...register("unit_price")} type="number" value={productFormUnit_price} onChange={(e) => setProductFormUnit_price(e.target.valueAsNumber)} required/>
+                {errors.unit_price && (<p className="text-red-500">{errors.unit_price.message}</p>)}
+                <input {...register("stock_level")} type="number" className="mb-2" value={productFormStock_level} onChange={ e => setProductFormStock_level(e.target.valueAsNumber)} required/>
+                {errors.stock_level && (<p className="text-red-500">{errors.stock_level.message}</p>)}
+                <div className="flex justify-start">
+                    <button type="button" className="mr-2 px-4 bg-blue-100 rounded" onClick={onSubmit}>Add</button>
+                    {isSubmitting && "Adding"}
+                    <button type="button" className="px-4 bg-red-100 rounded" onClick={() => {
+                        setProductFormSku("");
+                        setProductFormName("");
+                        setProductFormUnit_price(0);
+                        setProductFormStock_level(0);
+                        onCancel();
+                    }}>Cancel</button>
+                </div>
             </div>
         </div>
     );

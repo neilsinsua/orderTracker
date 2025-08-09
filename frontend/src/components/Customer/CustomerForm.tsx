@@ -1,61 +1,89 @@
-import { useState } from "react";
-import {createCustomer} from "../../services/customerService.tsx";
-import axios, {type AxiosError} from "axios";
+import type {ExistingCustomerType} from "./Customer.tsx";
+import {useCustomers} from "../../hooks/useCustomers.ts";
+import {z} from "zod";
+import {useForm} from "react-hook-form";
+import {zodResolver} from "@hookform/resolvers/zod";
+import {useCustomerStore} from "../../stores/customerStore.ts";
+import {useEffect} from "react";
 
 export interface CustomerFormProps {
+    customer?: ExistingCustomerType; // If present, it means we are editing an existing customer
     onCancel: () => void;
     onSuccess: () => void;
 }
 
-type EmailErr =  {email: string[]};
+const customerSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    email: z.email().min(1, "Email is required"),
+});
 
-export const CustomerForm = ({ onCancel, onSuccess}: CustomerFormProps) => {
-    const [name, setName] = useState<string>("");
-    const [email, setEmail] = useState<string>("");
-    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [emailErr, setEmailErr] = useState<string>("");
-    const checkEmailErr = (err: unknown): err is AxiosError<EmailErr> => {
-        return axios.isAxiosError(err);
-    }
-    const handleEmailErr = (err: AxiosError<EmailErr>): string => {
-        const error = err.response.data.email[0];
-        setEmailErr(error);
-    }
+type CustomerFormData = z.infer<typeof customerSchema>;
 
-    const handleSubmit = async () => {
-        //validate input
-        if (!name.trim() || !email.trim()) {
-            return alert("name and email required")
+export const CustomerForm = ({customer, onSuccess, onCancel}: CustomerFormProps) => {
+    const {createCustomer, updateCustomer, isCreating, isUpdating} = useCustomers(); // server state
+    const {
+        customerFormName,
+        customerFormEmail,
+        setCustomerFormName,
+        setCustomerFormEmail,
+    } = useCustomerStore(); // local state
+
+    const {
+        register,
+        handleSubmit,
+        formState: {errors, isSubmitting},
+    } = useForm<CustomerFormData>({ // form validation
+        resolver: zodResolver(customerSchema),
+        defaultValues: customer
+            ? {name: customer.name, email: customer.email}
+            : {name: "", email: ""}
+    });
+
+    useEffect(() => {
+        if (customer) {
+            setCustomerFormName(customer.name);
+            setCustomerFormEmail(customer.email);
         }
-        setIsSubmitting(true);
+    }, [customer, setCustomerFormName, setCustomerFormEmail]);
+
+    const onSubmit = handleSubmit(async (data: CustomerFormData) => {
         try {
-            await createCustomer({ name, email });
-            setName("");
-            setEmail("");
-            setEmailErr("")
-            onSuccess();
-        } catch (err) {
-            if(checkEmailErr(err)) {
-                handleEmailErr(err);
+            if (customer) {
+                await updateCustomer({ id: customer.id, customer: data });
+            } else {
+                await createCustomer(data);
             }
-            console.log(err);
-        } finally {
-            setIsSubmitting(false);
+            setCustomerFormName("");
+            setCustomerFormEmail("");
+            onSuccess();
+        } catch (error) {
+            console.error("Error submitting form:", error);
         }
-    }
+    })
 
     return (
         <div className="flex items-center w-full mb-4 space-x-4">
             <div className="flex-1 max-w-md p-4 bg-white shadow rounded-lg">
                 <div className="flex flex-col">
-                    <input type="text" placeholder="name" className="mb-2" onChange={(e) => setName(e.target.value)} required></input>
-                    <input className="mb-2" placeholder="email" type="text" onChange={(e) => setEmail(e.target.value)} required></input>
-                    <p className="text-red-500 mb-1">{emailErr}</p>
+                    <input {...register("name")} value={customerFormName} type="text" onChange={(e) => setCustomerFormName(e.target.value)} required></input>
+                    {errors.name && (
+                        <p className="text-red-500 mb-1">{errors.name.message}</p>
+                    )}
+                    <input {...register("email")} value={customerFormEmail} type="text" onChange={(e) => setCustomerFormEmail(e.target.value)} required></input>
+                    {errors.email && (
+                        <p className="text-red-500 mb-1">{errors.email.message}</p>
+                    )}
                 </div>
                 <div className="flex justify-start">
-                    <button type="button" className="mr-2 px-4 bg-blue-100 rounded" onClick={handleSubmit}>Add</button>
+                    <button type="button" className="mr-2 px-4 bg-blue-100 rounded" onClick={onSubmit}>Add</button>
                     {isSubmitting && "Adding"}
-                    <button type="button" onClick={onCancel} className="px-4 bg-red-100 rounded">Cancel</button>
+                    <button type="button" onClick={() => {
+                        setCustomerFormName("");
+                        setCustomerFormEmail("");
+                        onCancel();
+                    }} className="px-4 bg-red-100 rounded">Cancel</button>
+                    {isCreating && "Creating"}
+                    {isUpdating && "Updating"}
                 </div>
             </div>
         </div>

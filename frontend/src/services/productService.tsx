@@ -27,7 +27,7 @@ export async function createProduct(product: NewProductType ): Promise<NewProduc
     }
 }
 
-export async function deleteProduct(id: number): Promise<void> {
+export async function removeProduct(id: number): Promise<void> {
     try {
         await api.delete(`/products/${id}/`);
     } catch (error) {

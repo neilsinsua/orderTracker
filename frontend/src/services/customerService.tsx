@@ -10,6 +10,7 @@ const api = axios.create({
     }
 });
 
+
 export async function fetchCustomers(): Promise<ExistingCustomerType[]> {
     try {
         const response = await api.get<ExistingCustomerType[]>("/customers/");

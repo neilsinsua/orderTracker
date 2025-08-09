@@ -1,6 +1,6 @@
 
 
-export const OrderManager = () => {
+export const OrderList = () => {
     return (
         <div>
 
