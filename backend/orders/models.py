@@ -29,7 +29,7 @@ class Product(models.Model):
 class Order(models.Model):
     number = models.CharField(max_length=20, unique=True)
     date_and_time = models.DateTimeField(default=timezone.now)
-    customer_id = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     shipping_method = models.CharField(max_length=50, choices=SHIPPING_METHODS)
     shipping_cost = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=ORDER_STATUS, default='pending')
@@ -43,8 +43,8 @@ class Order(models.Model):
 
 #One Order to Many Items Table
 class OrderItem(models.Model):
-    order_id = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
-    product_id = models.ForeignKey(Product, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
 

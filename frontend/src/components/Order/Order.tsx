@@ -1,14 +1,12 @@
 
-export type OrderStatusType = 'pending' | 'shipped' | 'delivered';
-
-export interface NewOrderItem {
+export interface NewOrderItemType {
     order_id: number;
     product_id: number;
     quantity: number;
     unit_price: number;
 }
 
-export interface ExistingOrderItem extends NewOrderItem {
+export interface ExistingOrderItemType extends NewOrderItemType {
     id: number;
     created_at: string;
     updated_at: string;
@@ -20,8 +18,8 @@ export interface NewOrderType {
     customer_id: number;
     shipping_method: string;
     shipping_cost: number;
-    status: OrderStatusType;
-    items: NewOrderItem[];
+    status: string;
+    items: NewOrderItemType[];
 }
 
 export interface ExistingOrderType extends NewOrderType {
@@ -43,7 +41,6 @@ const Order = ({order}: ExistingOrderProps) => {
                 <p>{order.shipping_method}</p>
                 <p>{order.shipping_cost}</p>
                 <p>{order.status}</p>
-                <p>{order.items}</p>
             </div>
         </div>
     );

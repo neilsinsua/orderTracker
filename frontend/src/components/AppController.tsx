@@ -24,6 +24,7 @@ export const AppController = () => {
                 <nav className="flex">
                     <Link className="mr-2" to="/customers">Customers</Link>
                     <Link to="/products">Products</Link>
+                    <Link to="/orders">Orders</Link>
                 </nav>
                 <Routes>
                     <Route path="/products" element={<ProductList/>}/>

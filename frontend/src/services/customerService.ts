@@ -26,7 +26,7 @@ export async function createCustomer(customer: NewCustomerType): Promise<NewCust
         const response = await api.post<NewCustomerType>("/customers/", customer);
         return response.data;
     } catch (error) {
-        console.log(error);
+        console.error("Customer create error:", error);
         throw error;
     }
 }
@@ -44,6 +44,6 @@ export async function putCustomer(id: number, customer: NewCustomerType) {
     try {
         await api.put(`/customers/${id}/`, customer);
     } catch (error) {
-        console.log(error);
+        console.error("Customer update error:", error);
     }
 }

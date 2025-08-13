@@ -1,5 +1,5 @@
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {createCustomer, deleteCustomer, fetchCustomers, putCustomer} from "../services/customerService.tsx";
+import {createCustomer, deleteCustomer, fetchCustomers, putCustomer} from "../services/customerService.ts";
 import type {NewCustomerType} from "../components/Customer/Customer.tsx";
 
 export const useCustomers = () => {

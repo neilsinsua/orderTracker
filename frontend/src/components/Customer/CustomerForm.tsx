@@ -3,7 +3,6 @@ import {useCustomers} from "../../hooks/useCustomers.ts";
 import {z} from "zod";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
-import {useCustomerStore} from "../../stores/customerStore.ts";
 import {useEffect} from "react";
 
 export interface CustomerFormProps {
@@ -22,14 +21,9 @@ type CustomerFormData = z.infer<typeof customerSchema>;
 export const CustomerForm = ({customer, onSuccess, onCancel}: CustomerFormProps) => {
     const {createCustomer, updateCustomer, isCreating, isUpdating} = useCustomers(); // server state
     const {
-        customerFormName,
-        customerFormEmail,
-        setCustomerFormName,
-        setCustomerFormEmail,
-    } = useCustomerStore(); // local state
-
-    const {
         register,
+        setValue,
+        reset,
         handleSubmit,
         formState: {errors, isSubmitting},
     } = useForm<CustomerFormData>({ // form validation
@@ -41,10 +35,10 @@ export const CustomerForm = ({customer, onSuccess, onCancel}: CustomerFormProps)
 
     useEffect(() => {
         if (customer) {
-            setCustomerFormName(customer.name);
-            setCustomerFormEmail(customer.email);
+            setValue("name", customer.name);
+            setValue("email", customer.email);
         }
-    }, [customer, setCustomerFormName, setCustomerFormEmail]);
+    }, [customer]);
 
     const onSubmit = handleSubmit(async (data: CustomerFormData) => {
         try {
@@ -53,8 +47,7 @@ export const CustomerForm = ({customer, onSuccess, onCancel}: CustomerFormProps)
             } else {
                 await createCustomer(data);
             }
-            setCustomerFormName("");
-            setCustomerFormEmail("");
+            reset({name: "", email: ""});
             onSuccess();
         } catch (error) {
             console.error("Error submitting form:", error);
@@ -65,11 +58,11 @@ export const CustomerForm = ({customer, onSuccess, onCancel}: CustomerFormProps)
         <div className="flex items-center w-full mb-4 space-x-4">
             <div className="flex-1 max-w-md p-4 bg-white shadow rounded-lg">
                 <div className="flex flex-col">
-                    <input {...register("name")} value={customerFormName} type="text" onChange={(e) => setCustomerFormName(e.target.value)} required></input>
+                    <input {...register("name")} type="text" required></input>
                     {errors.name && (
                         <p className="text-red-500 mb-1">{errors.name.message}</p>
                     )}
-                    <input {...register("email")} value={customerFormEmail} type="text" onChange={(e) => setCustomerFormEmail(e.target.value)} required></input>
+                    <input {...register("email")} type="text" required></input>
                     {errors.email && (
                         <p className="text-red-500 mb-1">{errors.email.message}</p>
                     )}
@@ -78,8 +71,7 @@ export const CustomerForm = ({customer, onSuccess, onCancel}: CustomerFormProps)
                     <button type="button" className="mr-2 px-4 bg-blue-100 rounded" onClick={onSubmit}>Add</button>
                     {isSubmitting && "Adding"}
                     <button type="button" onClick={() => {
-                        setCustomerFormName("");
-                        setCustomerFormEmail("");
+                        reset({name: "", email: ""});
                         onCancel();
                     }} className="px-4 bg-red-100 rounded">Cancel</button>
                     {isCreating && "Creating"}

@@ -1,5 +1,5 @@
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {createProduct, removeProduct, fetchProducts, putProduct} from "../services/productService.tsx";
+import {createProduct, removeProduct, fetchProducts, putProduct} from "../services/productService.ts";
 import type {NewProductType} from "../components/Product/Product.tsx";
 
 

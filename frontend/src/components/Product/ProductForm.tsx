@@ -1,12 +1,9 @@
 import type {ExistingProductType, NewProductType} from "./Product.tsx";
 import {useProducts} from "../../hooks/useProducts.ts";
-import {useProductStore} from "../../stores/productStore.ts";
 import {z} from "zod";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {useEffect} from "react";
-
-
 
 export interface ProductFormProps {
     product?: ExistingProductType;
@@ -31,20 +28,11 @@ export const ProductForm = ({product, onCancel, onSuccess}: ProductFormProps) =>
         updateProduct,
         createProduct,
     } = useProducts();
-    const {
-        productFormSku,
-        productFormName,
-        productFormUnit_price,
-        productFormStock_level,
-        setProductFormSku,
-        setProductFormName,
-        setProductFormUnit_price,
-        setProductFormStock_level
-    } = useProductStore();
 
     const {
         register,
         handleSubmit,
+        setValue,
         formState: {errors, isSubmitting},
     } = useForm<ProductFormData>({
         resolver: zodResolver(productSchema),
@@ -55,12 +43,21 @@ export const ProductForm = ({product, onCancel, onSuccess}: ProductFormProps) =>
 
     useEffect(() => {
         if (product) {
-            setProductFormSku(product.sku);
-            setProductFormName(product.name);
-            setProductFormUnit_price(product.unit_price);
-            setProductFormStock_level(product.stock_level);
+            setValue("sku", product.sku);
+            setValue("name", product.name);
+            const unitPrice = product.unit_price.toString();
+            const stockLevel = product.stock_level.toString();
+            setValue("unit_price", unitPrice);
+            setValue("stock_level", stockLevel);
         }
-    }, [product, setProductFormSku, setProductFormName, setProductFormUnit_price, setProductFormStock_level]);
+    }, [product]);
+
+    const clearForm = () => {
+        setValue("sku", "");
+        setValue("name", "");
+        setValue("unit_price","");
+        setValue("stock_level", "");
+    }
 
     const onSubmit = handleSubmit(async (data: ProductFormData) => {
         try {
@@ -75,10 +72,7 @@ export const ProductForm = ({product, onCancel, onSuccess}: ProductFormProps) =>
             } else {
                 await createProduct(formattedData);
             }
-            setProductFormSku("");
-            setProductFormName("");
-            setProductFormUnit_price(0);
-            setProductFormStock_level(0);
+            clearForm();
             onSuccess();
         } catch (error) {
             console.error("Error submitting form:", error);
@@ -88,22 +82,19 @@ export const ProductForm = ({product, onCancel, onSuccess}: ProductFormProps) =>
     return (
         <div className="flex items-center w-full mb-4 space-x-4">
             <div className="flex-1 max-w-md p-4 bg-white shadow rounded-lg">
-                <input {...register("sku")} type="text" value={productFormSku} onChange={(e) => setProductFormSku(e.target.value)} required/>
+                <input {...register("sku")} type="text" required/>
                 {errors.sku && (<p className="text-red-500">{errors.sku.message}</p>)}
-                <input {...register("name")} type="text" value={productFormName} onChange={(e) => setProductFormName(e.target.value)} required/>
+                <input {...register("name")} type="text" required/>
                 {errors.name && (<p className="text-red-500">{errors.name.message}</p>)}
-                <input {...register("unit_price")} type="number" value={productFormUnit_price} onChange={(e) => setProductFormUnit_price(e.target.valueAsNumber)} required/>
+                <input {...register("unit_price")} type="number" min="0" step="0.01" required/>
                 {errors.unit_price && (<p className="text-red-500">{errors.unit_price.message}</p>)}
-                <input {...register("stock_level")} type="number" className="mb-2" value={productFormStock_level} onChange={ e => setProductFormStock_level(e.target.valueAsNumber)} required/>
+                <input {...register("stock_level")} type="number" min="0" step="1" className="mb-2" required/>
                 {errors.stock_level && (<p className="text-red-500">{errors.stock_level.message}</p>)}
                 <div className="flex justify-start">
                     <button type="button" className="mr-2 px-4 bg-blue-100 rounded" onClick={onSubmit}>Add</button>
                     {isSubmitting && "Adding"}
                     <button type="button" className="px-4 bg-red-100 rounded" onClick={() => {
-                        setProductFormSku("");
-                        setProductFormName("");
-                        setProductFormUnit_price(0);
-                        setProductFormStock_level(0);
+                        clearForm();
                         onCancel();
                     }}>Cancel</button>
                 </div>
