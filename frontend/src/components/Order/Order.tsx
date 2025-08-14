@@ -1,13 +1,15 @@
 
 export interface NewOrderItemType {
-    order_id: number;
-    product_id: number;
+    order: number;
+    product: number;
     quantity: number;
     unit_price: number;
 }
 
 export interface ExistingOrderItemType extends NewOrderItemType {
     id: number;
+    product_name: string;
+    product_sku: string;
     created_at: string;
     updated_at: string;
 }
@@ -15,11 +17,11 @@ export interface ExistingOrderItemType extends NewOrderItemType {
 export interface NewOrderType {
     number: string;
     date_and_time: string;
-    customer_id: number;
+    customer: number;
     shipping_method: string;
     shipping_cost: number;
     status: string;
-    items: NewOrderItemType[];
+    items: ExistingOrderItemType[];
 }
 
 export interface ExistingOrderType extends NewOrderType {

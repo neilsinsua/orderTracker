@@ -97,7 +97,7 @@ class OrderAPITest(APITestCase):
         self.cust = Customer.objects.create(name="Zoe", email="zoe@example.com")
         self.order = Order.objects.create(
             number="ORD123",
-            customer_id=self.cust,
+            customer_id=self.cust.id,
             shipping_method="express",
             shipping_cost=5.00,
             status="pending"
@@ -117,7 +117,7 @@ class OrderAPITest(APITestCase):
     def test_create_order_valid(self):
         data = {
             'number': 'ORD456',
-            'customer_id': self.cust.id,
+            'customer': self.cust.id,
             'shipping_method': 'standard',
             'shipping_cost': 10.00,
             'status': 'pending'
@@ -168,15 +168,15 @@ class OrderItemAPITest(APITestCase):
         self.prod = Product.objects.create(sku="SKU123", name="Test Product", unit_price=19.99)
         self.order = Order.objects.create(
             number="ORD123",
-            customer_id=self.cust,
+            customer_id=self.cust.id,
             shipping_method="express",
             shipping_cost=5.00,
             status="pending"
         )
         self.list_url = reverse('orderitem-list')
         self.order_item = OrderItem.objects.create(
-            order_id=self.order,
-            product_id=self.prod,
+            order_id=self.order.id,
+            product_id=self.prod.id,
             quantity=2,
             unit_price=19.99
         )

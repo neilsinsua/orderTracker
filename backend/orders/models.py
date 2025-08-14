@@ -39,7 +39,7 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Order {self.number} - {self.customer_id.name} - {self.status}"
+        return f"Order {self.number} - {self.customer.name} - {self.status}"
 
 #One Order to Many Items Table
 class OrderItem(models.Model):

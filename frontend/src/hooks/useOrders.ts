@@ -36,6 +36,7 @@ export const useOrders = () => {
         isLoading,
         isError,
         createOrder: createMutation.mutate,
+        createAsyncOrder: createMutation.mutateAsync,
         updateOrder: updateMutation.mutate,
         deleteOrder: deleteMutation.mutate,
         isCreating: createMutation.isPending,
