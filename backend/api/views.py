@@ -1,7 +1,9 @@
 from django.shortcuts import render
 from rest_framework import viewsets
+
 from .serializers import CustomerSerializer, ProductSerializer, OrderSerializer, OrderItemSerializer
 from orders.models import Customer, Product, Order, OrderItem
+
 
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()

@@ -16,13 +16,16 @@ export const ProductList = () => {
                 <Product key={c.id} product={c}/>
             ))}
             {!showAddForm && (
-                <button
-                    onClick={() => {
-                        setShowAddForm(true);
-                    }}
-                    className="mr-2 px-4 bg-blue-100 rounded mb-4">
-                    Add Product
-            </button>
+                <div className="flex justify-start px-4 py-4 bg-white shadow rounded-lg">
+                    <button
+                        onClick={() => {
+                            setShowAddForm(true);
+                        }}
+                        className="px-4 py-2 bg-blue-300 text-white-800 font-medium rounded hover:bg-blue-400 transition-colors">
+                        Add Product
+                    </button>
+                </div>
+
             )}
             {showAddForm && (
                 <ProductForm

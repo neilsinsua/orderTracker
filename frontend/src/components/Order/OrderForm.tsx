@@ -1,12 +1,15 @@
 import {z} from "zod";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {useFieldArray, useForm} from "react-hook-form";
-import {useCustomers} from "../../hooks/useCustomers.ts";
 import {useOrderStore} from "../../stores/orderStore.ts";
 import {useProducts} from "../../hooks/useProducts.ts";
 import type {NewOrderType} from "./Order.tsx";
-import {createOrderItem} from "../../services/OrderItemService.ts";
 import {useOrders} from "../../hooks/useOrders.ts";
+import {useDebounce} from "use-debounce";
+import {type CustomerOption, useCustomerSearch} from "../../hooks/useCustomerSearch.ts";
+import {useState} from "react";
+import {useOrderItems} from "../../hooks/useOrderItems.ts";
+import {useProductSearch} from "../../hooks/useProductSearch.ts";
 
 const SHIPPING_METHODS: string[] = [
     'standard',
@@ -37,28 +40,23 @@ const orderSchema = z.object({
     shipping_cost: z.string().refine(value => parseFloat(value) >= 0, {message: "Shipping cost cannot be negative"}),
     status: z.enum(ORDER_STATUSES as [string, ...string[]]),
     items: z.array(orderItemSchema).min(1, "At least one item is required"),
+    customerSearch: z.string().optional(),
 });
 
 type OrderFormData = z.infer<typeof orderSchema>;
 
+
 export const OrderForm = () => {
-    const {customers} = useCustomers();
+    const [selectedCustomer, setSelectedCustomer] = useState<CustomerOption>()
+    const {createAsyncOrder} = useOrders();
+    const {createOrderItem} = useOrderItems();
     const {products} = useProducts();
-    const customerOptions = customers.map(customer => ({
-        value: customer.id.toString(),
-        label: `${customer.name} (${customer.email})`,
-    }))
-    const productOptions = products.map(product => ({
-        value: product.id.toString(),
-        label: `${product.name} (${product.sku})`,
-        unit_price: product.unit_price.toString(),
-        stock_level: product.stock_level.toString(),
-    }))
+
     const {
         register,
         setValue,
-        getValues,
         watch,
+        getValues,
         handleSubmit,
         control,
         formState: {errors},
@@ -74,36 +72,55 @@ export const OrderForm = () => {
             items: []
         }
     });
-    const {fields, append, remove } = useFieldArray({
-        control,
-        name:"items"
-    })
     watch("customer")
+    const {fields, append, remove} = useFieldArray({
+        control,
+        name: "items"
+    })
     const {
         customerSearch,
         setCustomerSearch,
         productSearch,
         setProductSearch,
     } = useOrderStore();
-    const {createAsyncOrder} = useOrders();
+    const [debouncedCustomerSearch] = useDebounce(customerSearch, 300);
+    const [debouncedProductSearch] = useDebounce(productSearch, 300);
+    const {data: customerResults = []} = useCustomerSearch(debouncedCustomerSearch);
+    const {data: productResults = []} = useProductSearch(debouncedProductSearch);
+
     const onSubmit = handleSubmit(async (data: OrderFormData) => {
         try {
             const orderData: NewOrderType = {
-            number: data.number,
-            date_and_time: new Date(data.date_and_time).toISOString(),
-            customer: data.customer,
-            shipping_method: data.shipping_method,
-            shipping_cost: parseFloat(data.shipping_cost),
-            status: data.status,
-            items: []
-        };
+                number: data.number,
+                date_and_time: new Date(data.date_and_time).toISOString(),
+                customer: data.customer,
+                shipping_method: data.shipping_method,
+                shipping_cost: parseFloat(data.shipping_cost),
+                status: data.status,
+                items: []
+            };
             const createdOrder = await createAsyncOrder(orderData);
-            const itemPromises = data.items.map(async (item) => {
+            //sums up quantity of the same product
+            const itemsByProduct = data.items.reduce((acc, item) => {
+               //create first product for accumulator
+                if (!acc[item.product]) {
+                    acc[item.product] = {
+                        order: createdOrder.id,
+                        product: item.product,
+                        quantity: 0,
+                        unit_price: parseFloat(item.unit_price)
+                    };
+                }
+                acc[item.product].quantity += parseInt(item.quantity);
+                return acc;
+            }, {});
+
+            const itemPromises = Object.values(itemsByProduct).map(async (item) => {
                 return createOrderItem({
-                    order: createdOrder.id,
+                    order: item.order,
                     product: item.product,
-                    quantity: parseInt(item.quantity),
-                    unit_price: parseFloat(item.unit_price),
+                    quantity: item.quantity,
+                    unit_price: item.unit_price
                 });
             });
             await Promise.all(itemPromises);
@@ -122,94 +139,114 @@ export const OrderForm = () => {
         setValue("items", []);
         setCustomerSearch("");
         setProductSearch("");
+        setSelectedCustomer(undefined);
     }
     return (
-        <div className="space-y-6 p-6 bg-white shadow-md rounded-lg">
+        <div className="max-w-md mx-auto space-y-4 p-4 bg-white shadow-md rounded-lg">
             <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Order Number</label>
                 <input type="text"
-                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" {...register('number')}
+                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" {...register('number')}
                        required/>
-                {errors.number && <p className="text-red-500 text-sm">{errors.number.message}</p>}
+                {errors.number && <p className="text-red-500 text-xs">{errors.number.message}</p>}
             </div>
             <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Date and Time</label>
                 <input
                     type="datetime-local"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     {...register('date_and_time')}
                     required
                 />
-                {errors.date_and_time && <p className="text-red-500 text-sm">{errors.date_and_time.message}</p>}
+                {errors.date_and_time && <p className="text-red-500 text-xs">{errors.date_and_time.message}</p>}
             </div>
             <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Customer</label>
-                <div className="text-green-700">
-                    {customerOptions.find(option => option.value === getValues("customer").toString())?.label}
-                </div>
+                {selectedCustomer && (<div className="bg-gray-50 p-2 rounded-md text-sm">
+                    <p className="text-gray-700">
+                        Name: {selectedCustomer?.name}
+                    </p>
+                    <p className="text-gray-600">
+                        Email: {selectedCustomer?.email}
+                    </p>
+                </div>)}
                 <div className="space-y-2">
                     <input type="text" placeholder="search customers"
-                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           {...register("customerSearch")}
+                           className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                            onChange={(e) => setCustomerSearch(e.target.value)}/>
-                    {errors.customer && <p className="text-red-500 text-sm">{errors.customer.message}</p>}
+                    {errors.customer && <p className="text-red-500 text-xs">{errors.customer.message}</p>}
                     <input type="text" hidden={true} {...register("customer")}/>
                 </div>
-                <div className="mt-2 space-y-1">
-                    {customerOptions.filter(option => option.label.toLowerCase().includes(customerSearch.toLowerCase())).map(option => (
-                        <div key={option.value} className="p-2 hover:bg-gray-100 cursor-pointer rounded"
+                <div className="bg-white shadow-lg rounded-xl p-4 space-y-2 max-h-40 overflow-y-auto">
+                    {customerResults.map(option => (
+                        <div key={option.id} className="p-1 hover:bg-gray-50 cursor-pointer rounded text-sm"
                              onClick={() => {
-                                 const value = parseInt(option.value);
-                                 setValue("customer", value);
-                             }}>{option.label}</div>
+                                 const customer = customerResults.find(customer => customer.id === option.id);
+                                 const customerId = parseInt(customer.id);
+                                 setValue("customer", customerId);
+                                 if (customer) {
+                                     setSelectedCustomer(customer);
+                                 }
+                                 setValue("customerSearch", "")
+                                 setCustomerSearch("");
+                             }}>
+                            <p className="text-gray-700 font-semibold">
+                                {option.name}
+                            </p>
+                            <p className="text-gray-600 text-sm">
+                                {option.email}
+                            </p>
+                        </div>
                     ))}
                 </div>
             </div>
             <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Shipping Method</label>
                 <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" {...register("shipping_method")}>
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" {...register("shipping_method")}>
                     {SHIPPING_METHODS.map(value => (
                         <option key={value} value={value}>{value}</option>
                     ))}
                 </select>
-                {errors.shipping_method && <p className="text-red-500 text-sm">{errors.shipping_method.message}</p>}
+                {errors.shipping_method && <p className="text-red-500 text-xs">{errors.shipping_method.message}</p>}
             </div>
             <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Shipping Cost</label>
                 <input type="number" min="0"
-                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" {...register("shipping_cost")} />
-                {errors.shipping_cost && <p className="text-red-500 text-sm">{errors.shipping_cost.message}</p>}
+                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" {...register("shipping_cost")} />
+                {errors.shipping_cost && <p className="text-red-500 text-xs">{errors.shipping_cost.message}</p>}
             </div>
             <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Status</label>
                 <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" {...register("status")} >
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" {...register("status")} >
                     {ORDER_STATUSES.map(value => (
                         <option key={value} value={value}>{value}</option>
                     ))}
                 </select>
-                {errors.status && <p className="text-red-500 text-sm">{errors.status.message}</p>}
+                {errors.status && <p className="text-red-500 text-xs">{errors.status.message}</p>}
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
                 <label className="block text-sm font-medium text-gray-700">Order Items</label>
                 {fields.map((field, index) => (
-                    <div key={field.id} className="p-4 border border-gray-200 rounded-md space-y-3">
+                    <div key={field.id} className="p-3 border border-gray-200 rounded-md space-y-2 text-sm">
                         <div className="font-medium text-gray-700">
-                            {productOptions.find(option => option.value === getValues(`items.${index}.product`).toString())?.label}
+                            {products.find(product => product.id === parseInt(getValues(`items.${index}.product`)))?.name}
                         </div>
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
                             <label className="block text-sm font-medium text-gray-700">Quantity</label>
                             <input type="number" min="1"
-                                   className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" {...register(`items.${index}.quantity`)}/>
+                                   className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" {...register(`items.${index}.quantity`)}/>
                         </div>
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
                             <label className="block text-sm font-medium text-gray-700">Unit Price</label>
                             <input type="number" min="0" step="0.01"
-                                   className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" {...register(`items.${index}.unit_price`)}/>
+                                   className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" {...register(`items.${index}.unit_price`)}/>
                         </div>
                         <div>
                             <button type="button"
-                                    className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-500"
+                                    className="px-3 py-1 text-xs font-medium text-red-600 hover:text-red-500"
                                     onClick={() => remove(index)}>Remove
                             </button>
                         </div>
@@ -217,37 +254,39 @@ export const OrderForm = () => {
                 ))}
                 <label className="block text-sm font-medium text-gray-700">Pick Products</label>
                 <input type="text" placeholder="search products"
-                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                        onChange={(e) => setProductSearch(e.target.value)}/>
-                {errors.items && <p className="text-red-500 text-sm">{errors.items.message}</p>}
-                <div className="space-y-2">
-                    {productOptions.filter(option => option.label.toLowerCase().includes(productSearch.toLowerCase())).map(option => (
-                        <div key={option.value}
-                             className="flex items-center space-x-4 p-2 hover:bg-gray-100 cursor-pointer rounded"
+                {errors.items && <p className="text-red-500 text-xs">{errors.items.message}</p>}
+                <div className="bg-white shadow-lg rounded-xl p-4 space-y-2 max-h-40 overflow-y-auto">
+                    {productResults.map(option => (
+                        <div key={option.id}
+                             className="flex items-center space-x-4 p-3 hover:bg-gray-100 cursor-pointer rounded-md transition-colors duration-150 ease-in-out text-sm"
                              onClick={() => {
-                                 const product = products.find(product => product.id === parseInt(option.value));
-                                 if (product) {
+                                 if (option) {
                                      append({
                                          order: 0,
-                                         product: product.id,
+                                         product: parseInt(option.id),
                                          quantity: "1",
-                                         unit_price: product.unit_price.toString(),
+                                         unit_price: option.unitPrice.toString(),
                                      })
                                  }
                              }}>
-                            <p className="flex-1">{option.label}</p>
-                            <p className="text-gray-600">${option.unit_price}</p>
-                            <p className="text-gray-600">Stock: {option.stock_level}</p>
+                            <div className="flex-1">
+                                <p className="text-gray-800 font-semibold">{option.name}</p>
+                                <p className="text-gray-500 text-sm">SKU: {option.sku}</p>
+                            </div>
+                            <p className="text-gray-900 font-bold">${option.unitPrice}</p>
+                            <p className="text-gray-500 text-sm">Stock: {option.stockLevel}</p>
                         </div>
                     ))}
                 </div>
+
             </div>
             <div>
                 <button type="button"
                         className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         onClick={() => {
                             onSubmit();
-                            console.log(errors.items);
                         }}>Add Order
                 </button>
                 <button type="button"

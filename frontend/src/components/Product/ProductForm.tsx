@@ -82,21 +82,31 @@ export const ProductForm = ({product, onCancel, onSuccess}: ProductFormProps) =>
     return (
         <div className="flex items-center w-full mb-4 space-x-4">
             <div className="flex-1 max-w-md p-4 bg-white shadow rounded-lg">
-                <input {...register("sku")} type="text" required/>
-                {errors.sku && (<p className="text-red-500">{errors.sku.message}</p>)}
-                <input {...register("name")} type="text" required/>
-                {errors.name && (<p className="text-red-500">{errors.name.message}</p>)}
-                <input {...register("unit_price")} type="number" min="0" step="0.01" required/>
-                {errors.unit_price && (<p className="text-red-500">{errors.unit_price.message}</p>)}
-                <input {...register("stock_level")} type="number" min="0" step="1" className="mb-2" required/>
-                {errors.stock_level && (<p className="text-red-500">{errors.stock_level.message}</p>)}
-                <div className="flex justify-start">
-                    <button type="button" className="mr-2 px-4 bg-blue-100 rounded" onClick={onSubmit}>Add</button>
-                    {isSubmitting && "Adding"}
-                    <button type="button" className="px-4 bg-red-100 rounded" onClick={() => {
-                        clearForm();
-                        onCancel();
-                    }}>Cancel</button>
+                <input {...register("sku")} type="text" placeholder="SKU" className="w-full p-2 mb-2 border rounded"
+                       required/>
+                {errors.sku && (<p className="text-red-500 text-sm mb-2">{errors.sku.message}</p>)}
+                <input {...register("name")} type="text" placeholder="Name" className="w-full p-2 mb-2 border rounded"
+                       required/>
+                {errors.name && (<p className="text-red-500 text-sm mb-2">{errors.name.message}</p>)}
+                <input {...register("unit_price")} type="number" min="0" step="0.01" placeholder="Unit Price"
+                       className="w-full p-2 mb-2 border rounded" required/>
+                {errors.unit_price && (<p className="text-red-500 text-sm mb-2">{errors.unit_price.message}</p>)}
+                <input {...register("stock_level")} type="number" min="0" step="1" placeholder="Stock Level"
+                       className="w-full p-2 mb-4 border rounded" required/>
+                {errors.stock_level && (<p className="text-red-500 text-sm mb-2">{errors.stock_level.message}</p>)}
+                <div className="flex justify-start space-x-2">
+                    <button type="button"
+                            className="px-6 py-2 bg-blue-500 text-white font-medium rounded-md hover:bg-blue-600 transition-colors"
+                            onClick={onSubmit}>Add
+                    </button>
+                    {isSubmitting && <span className="flex items-center text-gray-500">Adding...</span>}
+                    <button type="button"
+                            className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-md hover:bg-gray-300 transition-colors"
+                            onClick={() => {
+                                clearForm();
+                                onCancel();
+                            }}>Cancel
+                    </button>
                 </div>
             </div>
         </div>

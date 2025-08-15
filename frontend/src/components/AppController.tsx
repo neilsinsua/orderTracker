@@ -21,10 +21,10 @@ export const AppController = () => {
     return(
         <QueryClientProvider client={queryClient}>
             <BrowserRouter>
-                <nav className="flex">
-                    <Link className="mr-2" to="/customers">Customers</Link>
-                    <Link to="/products">Products</Link>
-                    <Link to="/orders">Orders</Link>
+                <nav className="flex space-x-4 p-4 bg-gray-100 rounded-lg">
+                    <Link className="text-blue-600 hover:text-blue-800 font-medium" to="/customers">Customers</Link>
+                    <Link className="text-blue-600 hover:text-blue-800 font-medium" to="/products">Products</Link>
+                    <Link className="text-blue-600 hover:text-blue-800 font-medium" to="/orders">Orders</Link>
                 </nav>
                 <Routes>
                     <Route path="/products" element={<ProductList/>}/>

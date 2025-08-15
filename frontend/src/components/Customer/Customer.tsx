@@ -33,19 +33,28 @@ export const Customer = ({ customer }: ExistingCustomerProps) => {
             {!isEditing ? (
                 <div className="flex items-center w-full mb-4 space-x-4">
                     <div className="flex-1 max-w-md p-4 bg-white shadow rounded-lg">
-                    <p>{customer.name}</p>
-                    <p>{customer.email}</p>
+                        <p className="text-lg font-semibold">{customer.name}</p>
+                        <p className="text-gray-600">{customer.email}</p>
                     </div>
-                    <button onClick={() => setEditCustomerID(customer.id)} className="px-2 bg-orange-300 rounded">edit</button>
-                    <button type="button" onClick={handleDelete} className="px-2 bg-red-300 rounded">delete</button>
-                    {isDeleting && "Deleting"}
+                    <button
+                        onClick={() => setEditCustomerID(customer.id)}
+                        className="px-4 py-2 bg-orange-300 text-orange-800 font-medium rounded hover:bg-orange-400 transition-colors"
+                    >
+                        Edit
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleDelete}
+                        className="px-4 py-2 bg-red-300 text-red-800 font-medium rounded hover:bg-red-400 transition-colors"
+                    >
+                        {isDeleting ? "Deleting..." : "Delete"}
+                    </button>
                 </div>
             ) : (
                 <CustomerForm customer={customer}
                               onCancel={() => setEditCustomerID(null)}
                               onSuccess={() => setEditCustomerID(null)}/>
             )}
-
         </div>
     );
 }
