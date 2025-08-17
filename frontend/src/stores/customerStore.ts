@@ -2,14 +2,14 @@ import {create} from 'zustand'
 
 interface CustomerUIState {
     showAddForm: boolean;
-    editCustomerID: number | null;
+    editCustomer: number | null;
     setShowAddForm: (show: boolean) => void;
-    setEditCustomerID: (id: number | null) => void;
+    setEditCustomer: (id: number | null) => void;
 }
 
 export const useCustomerStore = create<CustomerUIState>((set) => ({
     showAddForm: false,
-    editCustomerID: null,
+    editCustomer: null,
     setShowAddForm: (show) => set({ showAddForm: show }),
-    setEditCustomerID: (id) => set({ editCustomerID: id }),
+    setEditCustomer: (id) => set({ editCustomer: id }),
 }))

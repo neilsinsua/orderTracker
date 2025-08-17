@@ -3,13 +3,21 @@ import {zodResolver} from "@hookform/resolvers/zod";
 import {useFieldArray, useForm} from "react-hook-form";
 import {useOrderStore} from "../../stores/orderStore.ts";
 import {useProducts} from "../../hooks/useProducts.ts";
-import type {NewOrderType} from "./Order.tsx";
+import type {ExistingOrderType, NewOrderType} from "./Order.tsx";
 import {useOrders} from "../../hooks/useOrders.ts";
 import {useDebounce} from "use-debounce";
-import {type CustomerOption, useCustomerSearch} from "../../hooks/useCustomerSearch.ts";
-import {useState} from "react";
+import {type CustomerOption, getCustomer, searchCustomerNameEmail} from "../../hooks/useCustomerSearch.ts";
+import {useEffect, useState} from "react";
 import {useOrderItems} from "../../hooks/useOrderItems.ts";
-import {useProductSearch} from "../../hooks/useProductSearch.ts";
+import {useProductSearch, getProduct} from "../../hooks/useProductSearch.ts";
+import {Product} from "../Product/Product.tsx";
+import {Customer} from "../Customer/Customer.tsx";
+
+export interface OrderFormProps {
+    order?: ExistingOrderType;
+    onCancel: () => void;
+    onSuccess: () => void;
+}
 
 const SHIPPING_METHODS: string[] = [
     'standard',
@@ -46,12 +54,13 @@ const orderSchema = z.object({
 type OrderFormData = z.infer<typeof orderSchema>;
 
 
-export const OrderForm = () => {
+export const OrderForm = ({order, onCancel, onSuccess}: OrderFormProps) => {
     const [selectedCustomer, setSelectedCustomer] = useState<CustomerOption>()
-    const {createAsyncOrder} = useOrders();
-    const {createOrderItem} = useOrderItems();
+    const [customerSearch, setCustomerSearch] = useState<string>("")
+    const [productSearch, setProductSearch] = useState<string>("")
+    const {createAsyncOrder, updateOrder} = useOrders();
+    const {createOrderItem, deleteOrderItem} = useOrderItems();
     const {products} = useProducts();
-
     const {
         register,
         setValue,
@@ -77,16 +86,46 @@ export const OrderForm = () => {
         control,
         name: "items"
     })
-    const {
-        customerSearch,
-        setCustomerSearch,
-        productSearch,
-        setProductSearch,
-    } = useOrderStore();
+
     const [debouncedCustomerSearch] = useDebounce(customerSearch, 300);
     const [debouncedProductSearch] = useDebounce(productSearch, 300);
-    const {data: customerResults = []} = useCustomerSearch(debouncedCustomerSearch);
+    const {data: customerResults = []} = searchCustomerNameEmail(debouncedCustomerSearch);
     const {data: productResults = []} = useProductSearch(debouncedProductSearch);
+    const formatDate = (iso: string) => {
+        const date = new Date(iso);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    useEffect(() => {
+        if (order) {
+            setValue("number", order.number);
+            console.log(order.date_and_time);
+            setValue("date_and_time", formatDate(order.date_and_time));
+            setValue("customer", order.customer);
+            getCustomer(order.customer).then(customer => {
+                setSelectedCustomer(customer);
+            }).catch(error => {
+                console.error("Error fetching customer:", error);
+            })
+            setValue("shipping_method", order.shipping_method);
+            setValue("shipping_cost", order.shipping_cost.toString());
+            setValue("status", order.status);
+            setValue('items', []);
+            order.items.forEach((item) => {
+                append({
+                    order: item.order,
+                    product: item.product,
+                    quantity: item.quantity.toString(),
+                    unit_price: item.unit_price.toString(),
+                })
+            })
+        }
+    }, []);
 
     const onSubmit = handleSubmit(async (data: OrderFormData) => {
         try {
@@ -99,13 +138,18 @@ export const OrderForm = () => {
                 status: data.status,
                 items: []
             };
-            const createdOrder = await createAsyncOrder(orderData);
-            //sums up quantity of the same product
+            let orderId;
+            if (order?.id) {
+                updateOrder({id: order.id, order: orderData});
+                orderId = order.id;
+            } else {
+                const createdOrder = await createAsyncOrder(orderData);
+                orderId = createdOrder.id;
+            }
             const itemsByProduct = data.items.reduce((acc, item) => {
-               //create first product for accumulator
                 if (!acc[item.product]) {
                     acc[item.product] = {
-                        order: createdOrder.id,
+                        order: orderId,
                         product: item.product,
                         quantity: 0,
                         unit_price: parseFloat(item.unit_price)
@@ -114,7 +158,10 @@ export const OrderForm = () => {
                 acc[item.product].quantity += parseInt(item.quantity);
                 return acc;
             }, {});
-
+            /*if order items exist, delete them first, then create new ones.*/
+            if (order?.items) {
+                await Promise.all(order.items.map(item => deleteOrderItem(item.id)));
+            }
             const itemPromises = Object.values(itemsByProduct).map(async (item) => {
                 return createOrderItem({
                     order: item.order,
@@ -129,6 +176,7 @@ export const OrderForm = () => {
             console.error("Error submitting form:", error);
         }
     })
+
     const clearForm = () => {
         setValue("number", "");
         setValue("date_and_time", "");
@@ -142,7 +190,7 @@ export const OrderForm = () => {
         setSelectedCustomer(undefined);
     }
     return (
-        <div className="max-w-md mx-auto space-y-4 p-4 bg-white shadow-md rounded-lg">
+        <div className="max-w-md space-y-4 p-4 bg-white shadow-md rounded-lg">
             <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Order Number</label>
                 <input type="text"
@@ -178,27 +226,30 @@ export const OrderForm = () => {
                     {errors.customer && <p className="text-red-500 text-xs">{errors.customer.message}</p>}
                     <input type="text" hidden={true} {...register("customer")}/>
                 </div>
-                <div className="bg-white shadow-lg rounded-xl p-4 space-y-2 max-h-40 overflow-y-auto">
-                    {customerResults.map(option => (
-                        <div key={option.id} className="p-1 hover:bg-gray-50 cursor-pointer rounded text-sm"
-                             onClick={() => {
-                                 const customer = customerResults.find(customer => customer.id === option.id);
-                                 const customerId = parseInt(customer.id);
-                                 setValue("customer", customerId);
-                                 if (customer) {
-                                     setSelectedCustomer(customer);
-                                 }
-                                 setValue("customerSearch", "")
-                                 setCustomerSearch("");
-                             }}>
-                            <p className="text-gray-700 font-semibold">
-                                {option.name}
-                            </p>
-                            <p className="text-gray-600 text-sm">
-                                {option.email}
-                            </p>
-                        </div>
-                    ))}
+                <div className="bg-white shadow-lg rounded-xl p-4 space-y-2 max-h-80 overflow-y-auto">
+                    {customerResults.map(customer => {
+                            const customerProps = {
+                                id: customer.id,
+                                name: customer.name,
+                                email: customer.email,
+                                created_at: customer.createdAt,
+                                updated_at: customer.updatedAt,
+                            }
+                            return (<div key={customer.id} className="p-1 hover:bg-gray-50 cursor-pointer rounded text-sm"
+                                         onClick={() => {
+                                             const customer = customerResults.find(customer => customer.id === customer.id);
+                                             const customerId = parseInt(customer.id);
+                                             setValue("customer", customerId);
+                                             if (customer) {
+                                                 setSelectedCustomer(customer);
+                                             }
+                                             setValue("customerSearch", "")
+                                             setCustomerSearch("");
+                                         }}>
+                                <Customer key={customer.id} customer={customerProps}/>
+                            </div>)
+                        }
+                    )}
                 </div>
             </div>
             <div className="space-y-2">
@@ -257,28 +308,33 @@ export const OrderForm = () => {
                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                        onChange={(e) => setProductSearch(e.target.value)}/>
                 {errors.items && <p className="text-red-500 text-xs">{errors.items.message}</p>}
-                <div className="bg-white shadow-lg rounded-xl p-4 space-y-2 max-h-40 overflow-y-auto">
-                    {productResults.map(option => (
-                        <div key={option.id}
-                             className="flex items-center space-x-4 p-3 hover:bg-gray-100 cursor-pointer rounded-md transition-colors duration-150 ease-in-out text-sm"
-                             onClick={() => {
-                                 if (option) {
+                <div className="bg-white shadow-lg rounded-xl p-4 space-y-2 max-h-80 overflow-y-auto">
+                    {productResults.map(product => {
+                        const productProps = {
+                            id: product.id,
+                            sku: product.sku,
+                            name: product.name,
+                            unit_price: product.unitPrice,
+                            stock_level: product.stockLevel,
+                            created_at: product.createdAt,
+                            updated_at: product.updatedAt,
+                        }
+                        return (
+                            <div key={product.id}
+                                 className="flex items-center space-x-4 p-3 hover:bg-gray-100 cursor-pointer rounded-md transition-colors duration-150 ease-in-out text-sm"
+                                 onClick={() => {
                                      append({
                                          order: 0,
-                                         product: parseInt(option.id),
+                                         product: parseInt(product.id),
                                          quantity: "1",
-                                         unit_price: option.unitPrice.toString(),
+                                         unit_price: product.unitPrice.toString(),
                                      })
-                                 }
-                             }}>
-                            <div className="flex-1">
-                                <p className="text-gray-800 font-semibold">{option.name}</p>
-                                <p className="text-gray-500 text-sm">SKU: {option.sku}</p>
+                                     console.log(product);
+                                 }}>
+                                <Product key={product.id} product={productProps}/>
                             </div>
-                            <p className="text-gray-900 font-bold">${option.unitPrice}</p>
-                            <p className="text-gray-500 text-sm">Stock: {option.stockLevel}</p>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
 
             </div>
@@ -287,11 +343,15 @@ export const OrderForm = () => {
                         className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         onClick={() => {
                             onSubmit();
+                            onSuccess();
                         }}>Add Order
                 </button>
                 <button type="button"
                         className="w-full px-4 py-2 mt-4 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        onClick={() => clearForm()}>Cancel
+                        onClick={() => {
+                            clearForm();
+                            onCancel();
+                        }}>Cancel
                 </button>
             </div>
         </div>

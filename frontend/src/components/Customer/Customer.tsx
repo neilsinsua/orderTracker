@@ -21,8 +21,8 @@ interface ExistingCustomerProps {
 export const Customer = ({ customer }: ExistingCustomerProps) => {
 
     const { deleteCustomer, isDeleting } = useCustomers();
-    const { editCustomerID, setEditCustomerID } = useCustomerStore();
-    const isEditing = editCustomerID === customer.id;
+    const { editCustomer, setEditCustomer } = useCustomerStore();
+    const isEditing = editCustomer === customer.id;
 
     const handleDelete = async () => {
         await deleteCustomer(customer.id);
@@ -37,7 +37,7 @@ export const Customer = ({ customer }: ExistingCustomerProps) => {
                         <p className="text-gray-600">{customer.email}</p>
                     </div>
                     <button
-                        onClick={() => setEditCustomerID(customer.id)}
+                        onClick={() => setEditCustomer(customer.id)}
                         className="px-4 py-2 bg-orange-300 text-orange-800 font-medium rounded hover:bg-orange-400 transition-colors"
                     >
                         Edit
@@ -52,8 +52,8 @@ export const Customer = ({ customer }: ExistingCustomerProps) => {
                 </div>
             ) : (
                 <CustomerForm customer={customer}
-                              onCancel={() => setEditCustomerID(null)}
-                              onSuccess={() => setEditCustomerID(null)}/>
+                              onCancel={() => setEditCustomer(null)}
+                              onSuccess={() => setEditCustomer(null)}/>
             )}
         </div>
     );

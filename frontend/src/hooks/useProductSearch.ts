@@ -8,6 +8,8 @@ export type ProductOption = {
     name: string;
     unitPrice: number;
     stockLevel: number;
+    createdAt: string;
+    updatedAt: string;
 }
 
 const SEARCH_PRODUCTS = gql`
@@ -18,8 +20,23 @@ query searchProducts($q: String!, $limit: Int) {
         name
         unitPrice
         stockLevel
+        createdAt
+        updatedAt
     }
 }`;
+
+const GET_PRODUCT = gql`
+                query GetProduct($id: Int!) {
+                    product(id: $id) {
+                        id
+                        name
+                        unitPrice
+                        stockLevel
+                        createdAt
+                        updatedAt
+                    }
+                }
+            `
 
 export function useProductSearch(q: string | undefined, limit = 5) {
     return useQuery<ProductOption[], Error>({
@@ -30,4 +47,14 @@ export function useProductSearch(q: string | undefined, limit = 5) {
             return data.products ?? [];
         },
     });
+}
+
+export async function getProduct(id: number): Promise<ProductOption> {
+    try {
+        const response = await graphqlClient.request(GET_PRODUCT, {id});
+        return response.product;
+    } catch (error) {
+        console.error("Error fetching product:", error);
+        throw error;
+    }
 }

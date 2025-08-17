@@ -7,7 +7,7 @@ export const useOrderItems = () => {
 
     const {data: orderItems = [], isLoading, isError} = useQuery({
         queryKey: ['order-items'],
-        queryFn: () => fetchOrderItems(),
+        queryFn: (orderID: number) => fetchOrderItems(orderID),
     });
 
     const createMutation = useMutation({

@@ -7,7 +7,7 @@ export const useOrders = () => {
 
     const {data: orders = [], isLoading, isError} = useQuery({
         queryKey: ['orders'],
-        queryFn: () => fetchOrders(),
+        queryFn: fetchOrders,
     });
 
     const createMutation = useMutation({
